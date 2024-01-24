@@ -2,7 +2,7 @@
 Defines built-in preprocessors for adding
 syntactic sugar to Nexsys2.
 """
-from nexsys2lib import DeclaredVariable, nexsys_findall
+from engine.nexsys2lib import DeclaredVariable, nexsys_findall
 
 def comments(system: str, ctx_dict: dict, declared_dict: dict):
     """

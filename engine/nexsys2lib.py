@@ -4,7 +4,7 @@ Contains code for solving equations with Nexsys2 as well as extending its functi
 from copy import deepcopy
 from dataclasses import dataclass
 from re import findall, IGNORECASE
-from geqslib import create_context_with, solve_equation, SystemBuilder, WILL_CONSTRAIN, WILL_OVERCONSTRAIN
+from engine.geqslib import create_context_with, solve_equation, SystemBuilder, WILL_CONSTRAIN, WILL_OVERCONSTRAIN
 
 _SUCCESS = True
 
@@ -102,7 +102,7 @@ class NexsysPreProcessorScheduler:
         """
         self.ordering = []
 
-    def schedule(self, kind: INexsys2PreProc, processor_fn: function):
+    def schedule(self, kind: INexsys2PreProc, processor_fn: any):
         """
         Adds a pre-processor to the schedule.
         """
@@ -120,7 +120,7 @@ def nexsys_findall(pattern: str, string: str):
     
     return findall(nexsys_pattern, string, IGNORECASE)
 
-def _try_solve_single_unknown_equation(eqn_pool: list[str], ctx_dict: dict, declared_dict: dict):
+def _try_solve_single_unknown_equation(eqn_pool: list, ctx_dict: dict, declared_dict: dict):
     """
     Tries to solve ONE single-unknown equation in the given pool. This function will 
     iterate through the given pool until it finds a solvable equation, updating the 
@@ -152,7 +152,7 @@ def _try_solve_single_unknown_equation(eqn_pool: list[str], ctx_dict: dict, decl
     # If no equations are solvable, indicate failure.
     return False
 
-def _try_solve_subsystem_of_equations(eqn_pool: list[str], ctx_dict: dict, declared_dict: dict):
+def _try_solve_subsystem_of_equations(eqn_pool: list, ctx_dict: dict, declared_dict: dict):
     """
     Tries to identify and solve a constrained system of equations within `eqn_pool`. 
     This function will iterate through the given pool until it finds a solvable system, 
@@ -171,7 +171,7 @@ def _try_solve_subsystem_of_equations(eqn_pool: list[str], ctx_dict: dict, decla
                 constraint_status = builder.try_constrain_with(sub_pool[i])
 
                 if WILL_CONSTRAIN == constraint_status:
-                    sub_pool.remove(i)
+                    sub_pool.pop(i)
                     still_learning = True
                     break
 

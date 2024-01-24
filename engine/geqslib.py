@@ -5,16 +5,16 @@ and solving them with the newton-raphson method.
 """
 
 from ctypes import c_char_p, c_double, c_int, c_uint, c_void_p
-from dll.geqslib_ffi import GEQSLIB_DLL
-import dll.geqslib_ffi
+from engine.dll.geqslib_ffi import GEQSLIB_DLL
+import engine.dll.geqslib_ffi
 
-RUST_ERROR_OCCURRED = dll.geqslib_ffi.RUST_ERROR_OCCURRED
+RUST_ERROR_OCCURRED = engine.dll.geqslib_ffi.RUST_ERROR_OCCURRED
 
-WILL_CONSTRAIN      = dll.geqslib_ffi.WILL_CONSTRAIN
-WILL_NOT_CONSTRAIN  = dll.geqslib_ffi.WILL_NOT_CONSTRAIN
-WILL_OVERCONSTRAIN  = dll.geqslib_ffi.WILL_OVERCONSTRAIN
+WILL_CONSTRAIN      = engine.dll.geqslib_ffi.WILL_CONSTRAIN
+WILL_NOT_CONSTRAIN  = engine.dll.geqslib_ffi.WILL_NOT_CONSTRAIN
+WILL_OVERCONSTRAIN  = engine.dll.geqslib_ffi.WILL_OVERCONSTRAIN
 
-FULLY_CONSTRAINED   = dll.geqslib_ffi.FULLY_CONSTRAINED
+FULLY_CONSTRAINED   = engine.dll.geqslib_ffi.FULLY_CONSTRAINED
 
 class Context:
     """
@@ -128,7 +128,7 @@ class Solution:
         """
         # GEQSLIB_DLL.free_solution_string(self.ptr)
 
-def create_context_with(ctx_dict: any, include_default_values: True):
+def create_context_with(ctx_dict: any, include_default_values: bool = True):
     """
     Creates a context from a `dict` or `Solution`, optionally containing the 
     default values 
@@ -226,7 +226,7 @@ class SystemBuilder:
             c_char_p(bytes(equation, "utf-8")), ctx.ptr
         ))
         if not maybe_builder:
-            raise Exception
+            raise Exception(f"Failed to build system from equation: {equation}")
 
         self.freed = False
         self.eqns = [equation]
