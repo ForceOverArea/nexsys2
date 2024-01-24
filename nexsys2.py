@@ -1,5 +1,14 @@
-import preprocessors
+from sys import argv
 from engine.nexsys2lib import nexsys2
+import engine.nexsys2preproc as nexsys2preproc
+
+preprocs = [ # Preprocessor list - This can be extended as desired to add more syntax sugar
+    nexsys2preproc.comments,
+    nexsys2preproc.const_values,
+    nexsys2preproc.domains,
+    nexsys2preproc.guess_values,
+    nexsys2preproc.conditionals 
+]
 
 def main(*args):
     """
@@ -8,8 +17,7 @@ def main(*args):
     """
     for system_file in args:
         with open(system_file, "r", encoding = "utf-8") as f:
-            print(nexsys2(f.read()))
+            print(nexsys2(f.read(), preprocs))
 
 if __name__ == "__main__":
-    from sys import argv
     main(*(argv[1:]))

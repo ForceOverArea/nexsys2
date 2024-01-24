@@ -3,7 +3,7 @@ Contains code for solving equations with Nexsys2 as well as extending its functi
 """
 from copy import deepcopy
 from dataclasses import dataclass
-from re import findall, IGNORECASE
+from re import findall, IGNORECASE, MULTILINE
 from engine.geqslib import create_context_with, solve_equation, SystemBuilder, WILL_CONSTRAIN, WILL_OVERCONSTRAIN
 
 _SUCCESS = True
@@ -25,89 +25,6 @@ class DeclaredVariable:
     min_val: float = float("-inf")
     max_val: float = float("inf")
 
-class INexsys2PreProc:
-    """
-    An interface for objects that preprocess nexsys text.
-    """
-    def __init__(self, processor_fn):
-        self.processor_fn = processor_fn
-
-    def process(self, system: str, ctx_dict: dict, declared_dict: dict):
-        """
-        Function signature for Nexsys2 pre-processor objects.
-        This method must be implemented in more specific instances 
-        of this class.
-        """
-        pass
-
-class PreProcUntilStable(INexsys2PreProc):
-    """
-    A Nexsys2 pre-processor that processes text until the
-    processor's input matches its output.
-
-    This is desirable for patterns that may compile recursively, 
-    i.e. "if statements".
-    """
-    def process(self, system: str, ctx_dict: dict, declared_dict: dict):
-        """
-        Processes `system` until this function stops 
-        producing new output.
-        """
-        new = self.processor_fn(system, ctx_dict, declared_dict)
-
-        while new != system:
-            system = deepcopy(new)
-            new = self.processor_fn(system, ctx_dict, declared_dict)
-
-        return system
-
-class PreProcOnce(INexsys2PreProc):
-    """
-    A Nexsys2 pre-processor that processes text once.
-
-    This is desirable for simple patterns that create metadata 
-    (i.e. ctx_dict, declared_dict) and do not create recursive 
-    patterns.
-    """
-    def process(self, system: str, ctx_dict: dict, declared_dict: dict):
-        """
-        Processes system once using the given `processor_fn`, 
-        mutating metadata dict's and returning the changed
-        system.
-        """
-        return self.processor_fn(system, ctx_dict, declared_dict)
-
-class NexsysPreProcessorScheduler:
-    """
-    A singleton/builder object for setting up a 
-    preprocessor battery. This singleton's instance
-    will be obtained and used by the `nexsys2` function 
-    to process text to a plain system of equations.
-    """
-
-    def __new__(cls):
-        """
-        A singleton/builder object for setting up a 
-        preprocessor battery. This singleton's instance
-        will be obtained and used by the `nexsys2` function 
-        to process text to a plain system of equations.
-        """
-        if not hasattr(cls, "instance"):
-            cls.instance = super(NexsysPreProcessorScheduler, cls).__new__(cls)
-        return cls.instance
-    
-    def __init__(self):
-        """
-        Initializes the preprocessor schedule.
-        """
-        self.ordering = []
-
-    def schedule(self, kind: INexsys2PreProc, processor_fn: any):
-        """
-        Adds a pre-processor to the schedule.
-        """
-        self.ordering.append(kind(processor_fn))
-
 def nexsys_findall(pattern: str, string: str):
     """
     Same as `re.findall`, but replaces `"@V"` and `"@N"` in the 
@@ -118,7 +35,9 @@ def nexsys_findall(pattern: str, string: str):
         .replace("@V", LEGAL_VAR_PATTERN) \
         .replace("@N", LEGAL_NUM_PATTERN)
     
-    return findall(nexsys_pattern, string, IGNORECASE)
+    # print(f"Searching for {nexsys_pattern}")
+    
+    return findall(nexsys_pattern, string, IGNORECASE | MULTILINE)
 
 def _try_solve_single_unknown_equation(eqn_pool: list, ctx_dict: dict, declared_dict: dict):
     """
@@ -201,7 +120,7 @@ def _try_solve_subsystem_of_equations(eqn_pool: list, ctx_dict: dict, declared_d
         else:
             return False
 
-def nexsys2(system: str):
+def nexsys2(system: str, preprocessors: list = []):
     """
     The process for solving a system of equations in Nexsys2. This function automatically 
     calls any preprocessors scheduled with the `NexsysPreProcessorScheduler` prior to solving.
@@ -210,8 +129,9 @@ def nexsys2(system: str):
     declared_dict = {}
 
     # Run preprocessors in order, mutating system and context along the way
-    for pp in NexsysPreProcessorScheduler().ordering:
+    for pp in preprocessors:
         system = pp(system, ctx_dict, declared_dict)
+        # print(system)
 
     # Split plain text into lines with 1 equation each
     equations = [line for line in system.split("\n") if "=" in line]

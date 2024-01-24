@@ -73,6 +73,8 @@ def conditionals(system: str, ctx_dict: dict, declared_dict: dict):
         
         system = system.replace(whole, formatted)
 
+    return system
+
 def const_values(system: str, ctx_dict: dict, declared_dict: dict):
     """
     Adds custom constants to the ctx dict.
@@ -120,6 +122,9 @@ def guess_values(system: str, ctx_dict: dict, declared_dict: dict):
     """
     pattern = r"^ *guess +(@N) +for +(@V) *$"
     for whole, val, var in nexsys_findall(pattern, system):
+
+        print(f"guessing {val} for {var}")
+
         if var in declared_dict:
             declared_dict[var].guess = float(val)
         else:
