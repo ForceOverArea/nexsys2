@@ -1,9 +1,8 @@
 """
 Contains code for solving equations with Nexsys2 as well as extending its functionality.
 """
-from copy import deepcopy
 from dataclasses import dataclass
-from re import findall, IGNORECASE, MULTILINE
+from re import findall, DOTALL, IGNORECASE
 from engine.geqslib import create_context_with, solve_equation, SystemBuilder, WILL_CONSTRAIN, WILL_OVERCONSTRAIN
 
 _SUCCESS = True
@@ -14,7 +13,7 @@ Regex pattern for a legal variable in Nexsys
 """
 
 # TODO: make the decimal point and afterwards optional AS A GROUP.
-LEGAL_NUM_PATTERN = r"-? ?[0-9]+\.?[0-9]+?"
+LEGAL_NUM_PATTERN = r"-? ?[0-9]+\.?[0-9]*"
 """
 Regex pattern for a legal number literal in Nexsys
 """
@@ -31,13 +30,11 @@ def nexsys_findall(pattern: str, string: str):
     given pattern with Nexsys-legal variable and number patterns, 
     respectively. Also sets only the IGNORECASE flag
     """
-    nexsys_pattern = pattern \
+    nexsys_pattern = "(" + pattern \
         .replace("@V", LEGAL_VAR_PATTERN) \
-        .replace("@N", LEGAL_NUM_PATTERN)
+        .replace("@N", LEGAL_NUM_PATTERN) + ")"
     
-    # print(f"Searching for {nexsys_pattern}")
-    
-    return findall(nexsys_pattern, string, IGNORECASE | MULTILINE)
+    return findall(nexsys_pattern, string, IGNORECASE | DOTALL)
 
 def _try_solve_single_unknown_equation(eqn_pool: list, ctx_dict: dict, declared_dict: dict):
     """
@@ -103,9 +100,9 @@ def _try_solve_subsystem_of_equations(eqn_pool: list, ctx_dict: dict, declared_d
 
             for var in declared_dict:
                 system.specify_variable(var, 
-                    declared_dict[var].guess, 
-                    declared_dict[var].min_val, 
-                    declared_dict[var].max_val)
+                    guess = declared_dict[var].guess, 
+                    min = declared_dict[var].min_val, 
+                    max = declared_dict[var].max_val)
 
             maybe_soln = system.solve_system()
 
@@ -131,7 +128,8 @@ def nexsys2(system: str, preprocessors: list = []):
     # Run preprocessors in order, mutating system and context along the way
     for pp in preprocessors:
         system = pp(system, ctx_dict, declared_dict)
-        # print(system)
+    
+    print(system)
 
     # Split plain text into lines with 1 equation each
     equations = [line for line in system.split("\n") if "=" in line]

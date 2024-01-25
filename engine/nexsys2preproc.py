@@ -2,6 +2,7 @@
 Defines built-in preprocessors for adding
 syntactic sugar to Nexsys2.
 """
+from copy import copy
 from engine.nexsys2lib import DeclaredVariable, nexsys_findall
 
 def comments(system: str, ctx_dict: dict, declared_dict: dict):
@@ -13,7 +14,7 @@ def comments(system: str, ctx_dict: dict, declared_dict: dict):
     // This is a Nexsys2-legal comment, just like in C
     ```
     """
-    pattern = r"^//[^\n]*$"
+    pattern = r"//[^\n]*"
 
     for match in nexsys_findall(pattern, system):
         system = system.replace(match, "")
@@ -44,8 +45,10 @@ def conditionals(system: str, ctx_dict: dict, declared_dict: dict):
                 "[" in line or 
                 "]" in line)
 
-    pattern = r"if *\[.*([<>=]{2}).*\].* +else +.* +end"
-    for whole, operator in nexsys_findall(pattern, system):
+    # pattern = r"if *\[.*([<>=]{2}).*\].* +else +.* +end"
+    pattern = r"if ?\[ ?.* ?([<>=]{1,2}) ?.* ?\] ?.* ?else ?.*"
+    for original, operator in nexsys_findall(pattern, system):
+        whole = copy(original)
 
         operator_code = {
             "==": ",1.0,",
@@ -58,7 +61,7 @@ def conditionals(system: str, ctx_dict: dict, declared_dict: dict):
  
         for line in whole.split("\n"):
             if is_eqn_not_if_statement_construct(line):
-                whole = whole.replace(format_eqn_to_expr(line))
+                whole = whole.replace(line, format_eqn_to_expr(line))
 
         # Remove whitespace and format args to if function call
         formatted = whole                       \
@@ -70,8 +73,8 @@ def conditionals(system: str, ctx_dict: dict, declared_dict: dict):
             .replace("]",       ",")            \
             .replace("else",    ",")            \
             .replace("end",     ") = 0")
-        
-        system = system.replace(whole, formatted)
+
+        system = system.replace(original, formatted)
 
     return system
 
@@ -84,7 +87,7 @@ def const_values(system: str, ctx_dict: dict, declared_dict: dict):
     const G = 87
     ```
     """
-    pattern = r"^ *const +(@V) *= *(@N) *$"
+    pattern = r"const +(@V) *= *(@N)"
     for whole, const, val in nexsys_findall(pattern, system):
         ctx_dict[const] = float(val)
         system = system.replace(whole, "")
@@ -100,13 +103,13 @@ def domains(system: str, ctx_dict: dict, declared_dict: dict):
     keep x on [0, 7]
     ```
     """
-    pattern = r"^ *keep +(@V) +on +\[ *(@N), *(@N) *\] *$"
+    pattern = r"keep +(@V) +on +\[ *(@N), *(@N) *\]"
     for whole, var, min_val, max_val in nexsys_findall(pattern, system):
         if var in declared_dict:
             declared_dict[var].min_val = float(min_val)
             declared_dict[var].max_val = float(max_val)
         else:
-            declared_dict[var] = DeclaredVariable(min_val = min_val, max_val = max_val)
+            declared_dict[var] = DeclaredVariable(min_val = float(min_val), max_val = float(max_val))
         system = system.replace(whole, "")
 
     return system
@@ -120,11 +123,8 @@ def guess_values(system: str, ctx_dict: dict, declared_dict: dict):
     guess 3 for x
     ```
     """
-    pattern = r"^ *guess +(@N) +for +(@V) *$"
+    pattern = r"guess +(@N) +for +(@V)"
     for whole, val, var in nexsys_findall(pattern, system):
-
-        print(f"guessing {val} for {var}")
-
         if var in declared_dict:
             declared_dict[var].guess = float(val)
         else:
