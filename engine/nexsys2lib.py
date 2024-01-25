@@ -18,6 +18,18 @@ LEGAL_NUM_PATTERN = r"-? ?[0-9]+\.?[0-9]*"
 Regex pattern for a legal number literal in Nexsys
 """
 
+RUST_KNOWN_VALUES = [
+    "sin",      "cos",      "tan",
+    "sinh",     "cosh",     "tanh",
+    "arcsin",   "arccos",   "arctan",
+    "ln",       "log10",    "log",
+    "abs",      "pi",       "e",
+    "if"
+]
+"""
+Values known in the default context value created in Rust.
+"""
+
 @dataclass
 class DeclaredVariable:
     guess:   float = 1.0
@@ -44,17 +56,17 @@ def _try_solve_single_unknown_equation(eqn_pool: list, ctx_dict: dict, declared_
     """
     for i, eqn in enumerate(eqn_pool): 
 
-        unknowns = [var for var in nexsys_findall("@V", eqn) if var not in ctx_dict]
-        if len(unknowns) != 1:
+        unknowns = [var for var in nexsys_findall("@V", eqn) if var not in ctx_dict and var not in RUST_KNOWN_VALUES]
+        if len(set(unknowns)) != 1:
             return False
         
         var_info = DeclaredVariable()
         if unknowns[0] in declared_dict:
-            var_info = declared_dict[unknowns[0]]
+            var_info = declared_dict[unknowns]
 
         # Try to solve equation...
         maybe_soln = solve_equation(eqn, 
-            create_context_with(ctx_dict),
+            ctx = create_context_with(ctx_dict),
             guess = var_info.guess,
             soln_min = var_info.min_val,
             soln_max = var_info.max_val)
@@ -111,7 +123,7 @@ def _try_solve_subsystem_of_equations(eqn_pool: list, ctx_dict: dict, declared_d
                 eqn_pool.clear()
                 eqn_pool.extend(sub_pool)
 
-            return True
+                return True
         
         # ...or just abort if no constrained system exists 
         else:
@@ -128,8 +140,6 @@ def nexsys2(system: str, preprocessors: list = []):
     # Run preprocessors in order, mutating system and context along the way
     for pp in preprocessors:
         system = pp(system, ctx_dict, declared_dict)
-    
-    print(system)
 
     # Split plain text into lines with 1 equation each
     equations = [line for line in system.split("\n") if "=" in line]

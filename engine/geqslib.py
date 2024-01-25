@@ -241,14 +241,14 @@ class SystemBuilder:
         status = c_int(GEQSLIB_DLL.try_constrain_with(
             self.ptr, c_char_p(bytes(equation, "utf-8"))
         ))
-        
-        if status == WILL_NOT_CONSTRAIN:
+
+        if status.value == WILL_NOT_CONSTRAIN:
             return 0
         
-        elif status == WILL_OVERCONSTRAIN:
+        elif status.value == WILL_OVERCONSTRAIN:
             return 2
         
-        elif status == RUST_ERROR_OCCURRED:
+        elif status.value == RUST_ERROR_OCCURRED:
             raise Exception
         
         self.eqns.append(equation)

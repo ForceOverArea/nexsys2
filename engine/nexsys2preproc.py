@@ -47,36 +47,39 @@ def conditionals(system: str, ctx_dict: dict, declared_dict: dict):
 
     # pattern = r"if *\[.*([<>=]{2}).*\].* +else +.* +end"
     pattern = r"if ?\[ ?.* ?([<>=]{1,2}) ?.* ?\] ?.* ?else ?.*"
-    for original, operator in nexsys_findall(pattern, system):
-        whole = copy(original)
+    while True:
+        raw_system = copy(system)
+        for original, operator in nexsys_findall(pattern, system):
+            whole = copy(original)
 
-        operator_code = {
-            "==": ",1.0,",
-            "<=": ",2.0,",
-            ">=": ",3.0,",
-             "<": ",4.0,",
-             ">": ",5.0,",
-            "!=": ",6.0,",
-        }[operator]
- 
-        for line in whole.split("\n"):
-            if is_eqn_not_if_statement_construct(line):
-                whole = whole.replace(line, format_eqn_to_expr(line))
+            operator_code = {
+                "==": ",1.0,",
+                "<=": ",2.0,",
+                ">=": ",3.0,",
+                "<": ",4.0,",
+                ">": ",5.0,",
+                "!=": ",6.0,",
+            }[operator]
+    
+            for line in whole.split("\n"):
+                if is_eqn_not_if_statement_construct(line):
+                    whole = whole.replace(line, format_eqn_to_expr(line))
 
-        # Remove whitespace and format args to if function call
-        formatted = whole                       \
-            .replace(" ",       "")             \
-            .replace("\t",      "")             \
-            .replace("\n",      "")             \
-            .replace("[",       "(")            \
-            .replace(operator,  operator_code)  \
-            .replace("]",       ",")            \
-            .replace("else",    ",")            \
-            .replace("end",     ") = 0")
+            # Remove whitespace and format args to if function call
+            formatted = whole                       \
+                .replace(" ",       "")             \
+                .replace("\t",      "")             \
+                .replace("\n",      "")             \
+                .replace("[",       "(")            \
+                .replace(operator,  operator_code)  \
+                .replace("]",       ",")            \
+                .replace("else",    ",")            \
+                .replace("end",     ") = 0")
 
-        system = system.replace(original, formatted)
+            system = system.replace(original, formatted)
 
-    return system
+        if raw_system == system: # only quit when all ifs have been compiled
+            return system
 
 def const_values(system: str, ctx_dict: dict, declared_dict: dict):
     """
